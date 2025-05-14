@@ -1,0 +1,88 @@
+
+Campaigns Feature Design (FastAPI + MongoDB)
+============================================
+
+Date: 2025-05-11
+
+Overview:
+---------
+Enhance the FastAPI web app with a fully functional Campaigns page where users can:
+- Select contacts from saved list (linked to user)
+- Choose a job role for which referral is needed (from `ref_tag`)
+- Select a resume PDF (uploaded earlier)
+- Preview & edit personalized referral emails (auto-generated)
+- Send emails with tracking pixel
+- Save campaign, email tracking, and related data into MongoDB
+
+Frontend (Campaigns Page - /campaigns):
+---------------------------------------
+- Display user's saved contacts (with checkboxes)
+- Dropdown for selecting uploaded resume (from `docs` collection)
+- Input/select job role (linked to ref_tag per contact)
+- Show preview of each generated email (editable)
+- Attach resume PDF and add tracking pixel in email
+- "Send Campaign" button sends all emails and updates MongoDB
+
+MongoDB Schema Updates:
+------------------------
+
+1. campaigns collection
+------------------------
+{
+  "_id": ObjectId,
+  "user_id": ObjectId,
+  "name": "Campaign Title",
+  "created_at": ISODate,
+  "job_role": "Machine Learning Engineer",
+  "resume_doc_id": ObjectId,  // reference to docs collection
+  "contacts": [
+    {
+      "contact_id": ObjectId,
+      "email_sent": true,
+      "email_id": ObjectId // from email_tracking
+    }
+  ]
+}
+
+2. docs collection (Resumes)
+-----------------------------
+{
+  "_id": ObjectId,
+  "user_id": ObjectId,
+  "file_name": "resume.pdf",
+  "file_data": Binary,
+  "content_type": "application/pdf",
+  "uploaded_at": ISODate
+}
+
+3. email_tracking collection
+-----------------------------
+{
+  "_id": ObjectId,
+  "user_id": ObjectId,
+  "campaign_id": ObjectId,
+  "contact_id": ObjectId,
+  "email": "contact@example.com",
+  "status": "sent" | "opened",
+  "sent_at": ISODate,
+  "opened_at": ISODate, // optional
+  "tracking_pixel_url": "/track?eid=<email_id>"
+}
+
+Email Generation Logic:
+------------------------
+- For each contact:
+  - Get domain from email to infer company
+  - Use ref_tag to determine job role
+  - Generate message: 
+    "Hi [Name], I noticed you're at [Company]. I'm applying for a [ref_tag] role and would appreciate a referral."
+  - Attach selected resume
+  - Embed tracking pixel <img src="https://yourdomain.com/track?eid=EMAIL_TRACKING_ID" width="1" height="1" />
+
+Backend Endpoints to Add:
+--------------------------
+- GET /campaigns/create -> shows contacts, resumes, etc.
+- POST /campaigns/preview-email -> returns preview for a contact
+- POST /campaigns/send -> sends emails and updates db
+- GET /track?eid=... -> logs email open
+

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>Manage Resumes</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+</head>
+<body class="bg-gray-100">
+    <div class="flex min-h-screen"> <!-- Flex container for sidebar and main content -->
+        <!-- Sidebar -->
+        <aside class="w-60 bg-gray-800 text-gray-100 p-4 flex flex-col h-screen">
+            <h2 class="text-2xl font-semibold mb-6 text-white text-center">Menu</h2>
+            <nav class="flex-grow space-y-1">
+                {% if user_name %}
+                <a href="/" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/' %}bg-gray-700{% endif %}">
+                    Search
+                </a>
+                <a href="/my-contacts" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/my-contacts' %}bg-gray-700{% endif %}">
+                    View Contacts
+                </a>
+                <a href="/campaigns" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/campaigns' %}bg-gray-700{% endif %}">
+                    Campaigns
+                </a>
+                <a href="/resumes" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/resumes' %}bg-gray-700{% endif %}">
+                    Resumes
+                </a>
+                <a href="{{ url_for('smtp_settings_page') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == url_for('smtp_settings_page') %}bg-gray-700{% endif %}">
+                    SMTP Settings
+                </a>
+                <a href="{{ url_for('email_tracking_dashboard') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == url_for('email_tracking_dashboard') %}bg-gray-700{% endif %}">
+                    Email Tracking
+                </a>
+                {% endif %}
+            </nav>
+            {% if user_name %}
+            <div class="mt-auto pb-4">
+                 <a href="/logout" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-red-500 hover:text-white text-center bg-gray-700">
+                    Logout
+                </a>
+            </div>
+            {% endif %}
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-grow flex flex-col">
+            <!-- Header -->
+            <header class="bg-white shadow-md sticky top-0 z-10">
+                <div class="max-w-full mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">Manage Your Resumes</h1>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center">
+                            <span class="mr-2 text-sm text-gray-600">🌞</span>
+                            <label for="theme-toggle" class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="theme-toggle" class="sr-only">
+                                <div class="w-11 h-6 bg-gray-300 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                            </label>
+                            <span class="ml-2 text-sm text-gray-600">🌙</span>
+                        </div>
+                        {% if user_name %}
+                            <span class="text-sm text-gray-700">Welcome, {{ user_name }}!</span>
+                        {% else %}
+                            <span class="text-sm text-gray-700">Please log in to manage resumes.</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </header>
+
+            <!-- Actual Page Content -->
+            <main class="flex-grow p-6 overflow-y-auto">
+                {% if user_name %}
+                <!-- Upload Section -->
+                <div class="bg-white shadow rounded-lg p-6 mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Upload New Resume</h2>
+                    {% if flash_message %}
+                    <div class="p-4 mb-4 text-sm rounded-lg {% if flash_category == 'success' %}bg-green-100 text-green-700{% elif flash_category == 'error' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}" role="alert">
+                        {{ flash_message }}
+                    </div>
+                    {% endif %}
+                    <form id="uploadResumeForm" action="{{ url_for('upload_resume') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                        <div>
+                            <label for="resumeFile" class="block text-sm font-medium text-gray-700">Resume (PDF only, max 2MB)</label>
+                            <div class="mt-1">
+                                <input type="file" name="resumeFile" id="resumeFile" accept=".pdf" required
+                                       class="focus:ring-indigo-500 focus:border-indigo-500 block w-full rounded-md sm:text-sm border-gray-300 p-2 border">
+                            </div>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit"
+                                    class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Upload Resume
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Existing Resumes Section -->
+                <div class="bg-white shadow rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Uploaded Resumes</h2>
+                    {% if resumes and resumes|length > 0 %}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filename</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for resume in resumes %}
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ resume.filename }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ resume.upload_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <a href="{{ url_for('view_resume', resume_id=resume._id) }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 mr-3">Preview</a>
+                                        <form action="{{ url_for('delete_resume', resume_id=resume._id) }}" method="POST" style="display:inline;">
+                                            <button type="submit" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure you want to delete this resume?');">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500">You haven't uploaded any resumes yet.</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="bg-white shadow rounded-lg p-6 text-center">
+                    <p class="text-gray-700 text-lg">Please <a href="{{ url_for('login') }}" class="text-indigo-600 hover:text-indigo-800">log in</a> or <a href="{{ url_for('register') }}" class="text-indigo-600 hover:text-indigo-800">register</a> to manage your resumes.</p>
+                </div>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+    <script src="{{ url_for('static', path='/script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>OutreachPro – Email Settings</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+</head>
+<body class="bg-gray-100">
+    <div class="flex min-h-screen"> <!-- Flex container for sidebar and main content -->
+        <!-- Sidebar - Fixed Position -->
+        <aside class="fixed top-0 left-0 w-60 bg-gray-800 text-gray-100 p-4 flex flex-col h-screen z-20">
+            <h2 class="text-2xl font-semibold mb-6 text-white text-center">Menu</h2>
+            <nav class="flex-grow space-y-1">
+                {% if user_name %}
+                <a href="/" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/' %}bg-gray-700{% endif %}">
+                    Search
+                </a>
+                <a href="/my-contacts" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/my-contacts' %}bg-gray-700{% endif %}">
+                    View Contacts
+                </a>
+                <a href="/campaigns" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/campaigns' %}bg-gray-700{% endif %}">
+                    Campaigns
+                </a>
+                <a href="/resumes" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/resumes' %}bg-gray-700{% endif %}">
+                    Resumes
+                </a>
+                <a href="{{ url_for('smtp_settings_page') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == url_for('smtp_settings_page') %}bg-gray-700{% endif %}">
+                    SMTP Settings
+                </a>
+                <a href="{{ url_for('email_tracking_dashboard') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == url_for('email_tracking_dashboard') %}bg-gray-700{% endif %}">
+                    Email Tracking
+                </a>
+                {% endif %}
+            </nav>
+            {% if user_name %}
+            <div class="mt-auto pb-4">
+                 <a href="/logout" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-red-500 hover:text-white text-center bg-gray-700">
+                    Logout
+                </a>
+            </div>
+            {% endif %}
+        </aside>
+
+        <!-- Spacer to offset the fixed sidebar -->
+        <div class="w-60 flex-shrink-0"></div>
+
+        <!-- Main Content Area -->
+        <div class="flex-grow flex flex-col">
+            <!-- Header -->
+            <header class="bg-white shadow-md sticky top-0 z-10">
+                <div class="max-w-full mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">Email Delivery Settings</h1>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center">
+                            <span class="mr-2 text-sm text-gray-600">🌞</span>
+                            <label for="theme-toggle" class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="theme-toggle" class="sr-only">
+                                <div class="w-11 h-6 bg-gray-300 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                            </label>
+                            <span class="ml-2 text-sm text-gray-600">🌙</span>
+                        </div>
+                        {% if user_name %}
+                            <span class="text-sm text-gray-700">Welcome, {{ user_name }}!</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </header>
+
+            <!-- Actual Page Content -->
+            <main class="flex-grow py-6 overflow-y-auto">
+                <div class="max-w-7xl mx-auto px-6 lg:px-8">
+                    <div class="bg-white shadow rounded-lg p-6 mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Configure Email Sending</h2>
+                    
+                    {% if flash_message %}
+                    <div class="p-4 mb-4 text-sm rounded-lg {% if flash_category == 'success' %}bg-green-100 text-green-700{% elif flash_category == 'error' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}" role="alert">
+                        {{ flash_message }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="bg-blue-50 text-blue-800 p-4 mb-6 rounded-lg text-sm">
+                        <p><strong>Note:</strong> The username you enter below (usually your email address) will also be used as the sender email address ("From" address) when sending campaign emails.</p>
+                    </div>
+                    
+                    <form action="{{ url_for('save_smtp_settings') }}" method="post" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="smtp_host" class="block text-sm font-medium text-gray-700">SMTP Host</label>
+                                <input type="text" id="smtp_host" name="smtp_host" value="{{ smtp_settings.host if smtp_settings else '' }}" required 
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <p class="mt-1 text-xs text-gray-500">Example: smtp.gmail.com</p>
+                            </div>
+                            
+                            <div>
+                                <label for="smtp_port" class="block text-sm font-medium text-gray-700">SMTP Port</label>
+                                <input type="number" id="smtp_port" name="smtp_port" value="{{ smtp_settings.port if smtp_settings else '587' }}" required 
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <p class="mt-1 text-xs text-gray-500">Common ports: 587 (TLS), 465 (SSL)</p>
+                            </div>
+                            
+                            <div>
+                                <label for="smtp_username" class="block text-sm font-medium text-gray-700">Username / Sender Email</label>
+                                <input type="text" id="smtp_username" name="smtp_username" value="{{ smtp_settings.username if smtp_settings else '' }}" required 
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <p class="mt-1 text-xs text-gray-500">Your full email address - this will be used as both login and sender address</p>
+                            </div>
+                            
+                            <div>
+                                <label for="smtp_password" class="block text-sm font-medium text-gray-700">Password</label>
+                                <input type="password" id="smtp_password" name="smtp_password" value="{{ smtp_settings.password if smtp_settings else '' }}" required 
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <p class="mt-1 text-xs text-gray-500">For Gmail, use an App Password rather than your account password</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end pt-4">
+                            <button type="submit" 
+                                    class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Save Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="bg-white shadow rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">SMTP Configuration Help</h2>
+                    <div class="prose max-w-none">
+                        <h3 class="text-lg font-medium text-gray-800">Common SMTP Settings</h3>
+                        <ul class="list-disc pl-5 space-y-2 text-gray-600">
+                            <li><strong>Gmail:</strong> Host: smtp.gmail.com, Port: 587 (TLS)</li>
+                            <li><strong>Yahoo:</strong> Host: smtp.mail.yahoo.com, Port: 587 (TLS)</li>
+                            <li><strong>Outlook/Hotmail:</strong> Host: smtp.office365.com, Port: 587 (TLS)</li>
+                        </ul>
+                        
+                        <h3 class="text-lg font-medium text-gray-800 mt-4">Setting Up Gmail For Sending</h3>
+                        <ol class="list-decimal pl-5 space-y-2 text-gray-600">
+                            <li>Enable 2-Factor Authentication on your Google account</li>
+                            <li>Generate an App Password (Google Account → Security → App Passwords)</li>
+                            <li>Use your Gmail address as the username and the App Password as the password</li>
+                        </ol>
+                        
+                        <h3 class="text-lg font-medium text-gray-800 mt-4">Important Note About Sender Email</h3>
+                        <p class="text-gray-600">
+                            Most email providers require that the sender email address matches the authenticated account. 
+                            This is why your SMTP username (typically your email address) will be used as the sender address in campaigns.
+                            Your display name will still appear as shown to recipients (e.g., "Your Name &lt;your.email@example.com&gt;").
+                        </p>
+                    </div>
+                </div>
+            </div> <!-- Close max-w-7xl wrapper -->
+            </main>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', path='/script.js') }}"></script>
+</body>
+</html>

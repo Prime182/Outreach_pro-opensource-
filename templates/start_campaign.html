@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>OutreachPro – Job Campaign: {{ campaign.campaign_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+    <!-- Consider adding a CSS library for rich text editor if needed later -->
+</head>
+<body class="bg-gray-100">
+    <div class="flex min-h-screen">
+        <!-- Sidebar - Fixed Position -->
+        <aside class="fixed top-0 left-0 w-60 bg-gray-800 text-gray-100 p-4 flex flex-col h-screen z-20">
+            <h2 class="text-2xl font-semibold mb-6 text-white text-center">OutreachPro</h2>
+            <nav class="flex-grow space-y-1">
+                {% if user_name %}
+                <a href="/" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/' %}bg-gray-700{% endif %}">
+                    Search
+                </a>
+                <a href="/my-contacts" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/my-contacts' %}bg-gray-700{% endif %}">
+                    View Contacts
+                </a>
+                <a href="/campaigns" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/campaigns' %}bg-gray-700{% endif %}">
+                    Campaigns
+                </a>
+                <a href="/resumes" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/resumes' %}bg-gray-700{% endif %}">
+                    Resumes
+                </a>
+                <a href="{{ url_for('smtp_settings_page') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == url_for('smtp_settings_page') %}bg-gray-700{% endif %}">
+                    SMTP Settings
+                </a>
+                <a href="{{ url_for('email_tracking_dashboard') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == url_for('email_tracking_dashboard') %}bg-gray-700{% endif %}">
+                    Email Tracking
+                </a>
+                {% endif %}
+            </nav>
+            {% if user_name %}
+            <div class="mt-auto">
+                 <a href="/logout" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-red-500 hover:text-white text-center bg-gray-700">
+                    Logout
+                </a>
+            </div>
+            {% endif %}
+        </aside>
+
+        <!-- Spacer to offset the fixed sidebar -->
+        <div class="w-60 flex-shrink-0"></div>
+
+        <!-- Main Content Area -->
+        <div class="flex-grow flex flex-col">
+            <!-- Header -->
+            <header class="bg-white shadow-md sticky top-0 z-10">
+                <div class="max-w-full mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">OutreachPro – Job Campaign: {{ campaign.campaign_name }}</h1>
+                        <div class="mt-2">
+                            <a href="{{ url_for('campaign_tracking_details', campaign_id=campaign._id) }}" class="text-purple-600 hover:text-purple-800 text-sm flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                View Tracking Stats
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center">
+                            <span class="mr-2 text-sm text-gray-600">🌞</span>
+                            <label for="theme-toggle" class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="theme-toggle" class="sr-only">
+                                <div class="w-11 h-6 bg-gray-300 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                            </label>
+                            <span class="ml-2 text-sm text-gray-600">🌙</span>
+                        </div>
+                        {% if user_name %}
+                            <span class="text-sm text-gray-700">Welcome, {{ user_name }}!</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </header>
+
+            <!-- Actual Page Content -->
+            <main class="flex-grow py-6 overflow-y-auto">
+                <div class="max-w-7xl mx-auto px-6 lg:px-8">
+                    <!-- Check if campaign already sent and show message -->
+                    {% if campaign.status and campaign.status in ['sending', 'sent'] %}
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-yellow-700">
+                                    This campaign has already been sent (status: <strong>{{ campaign.status }}</strong>). To prevent duplicate emails, you cannot send this campaign again.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Form for sending the campaign -->
+                    <form id="send-campaign-form" action="{{ url_for('send_campaign', campaign_id=campaign._id) }}" method="POST" enctype="multipart/form-data">
+                        
+                        <!-- Contact selection section -->
+                        <div class="mb-6 border rounded-lg p-4 bg-white shadow">
+                            <h3 class="text-lg font-medium text-gray-900 mb-3">Select Contact to Edit Email</h3>
+                            <div class="flex flex-wrap gap-2">
+                                {% for contact in contacts %}
+                                <button type="button" 
+                                        class="contact-select-btn px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-indigo-50"
+                                        data-contact-id="{{ contact._id }}">
+                                    {{ contact.name }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Current email editor -->
+                        <div id="current-email-editor" class="mb-6 border rounded-lg p-4 bg-white shadow hidden">
+                            <h3 id="current-contact-name" class="text-lg font-medium text-gray-900 mb-3">Email for: [Select Contact]</h3>
+                            
+                            <div class="mb-4">
+                                <label for="current_subject" class="block text-sm font-medium text-gray-700">Subject</label>
+                                <input type="text" name="current_subject" id="current_subject" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                       placeholder="Email subject line">
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="current_body" class="block text-sm font-medium text-gray-700">Email Body</label>
+                                <textarea name="current_body" id="current_body" rows="10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                          placeholder="Type your email content here..."></textarea>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="resume_for_contact" class="block text-sm font-medium text-gray-700">Resume to Attach</label>
+                                    <select id="resume_for_contact" name="resume_for_contact" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                        <option value="">Select a resume</option>
+                                        {% for resume in resumes %}
+                                        <option value="{{ resume._id }}">{{ resume.filename }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div class="flex flex-col">
+                                    <label for="custom_prompt_for_contact" class="block text-sm font-medium text-gray-700">Custom Generation Instructions</label>
+                                    <input type="text" id="custom_prompt_for_contact" class="mt-1 flex-grow rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                                           placeholder="E.g., Make it more casual, mention specific skills...">
+                                    <button type="button" id="generate_for_contact_btn" class="mt-2 inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                        Regenerate
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Message when no contact is selected -->
+                        <div id="no-contact-selected" class="mb-6 border rounded-lg p-4 bg-white shadow text-center">
+                            <p class="text-gray-500">Select a contact from above to edit their personalized email.</p>
+                        </div>
+                        
+                        <!-- Hidden data store for email content -->
+                        <div id="email-data-store" class="hidden">
+                            {% for email in generated_emails %}
+                                <input type="hidden" id="subject_{{ email.contact_id }}" name="subjects[{{ email.contact_id }}]" value="{{ email.generated_subject }}">
+                                <textarea class="hidden" id="body_{{ email.contact_id }}" name="bodies[{{ email.contact_id }}]">{{ email.generated_body }}</textarea>
+                                <input type="hidden" id="resume_{{ email.contact_id }}" name="resumes[{{ email.contact_id }}]" value="">
+                            {% endfor %}
+                        </div>
+
+                            <!-- Submit Button -->
+                        <div class="flex justify-end items-center space-x-3 pt-4">
+                            <a href="{{ url_for('campaigns_page') }}"
+                               class="py-2 px-6 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Go Back
+                            </a>
+                            
+                            <!-- Disable start button if campaign already sent -->
+                            {% if campaign.status and campaign.status in ['sending', 'sent'] %}
+                            <button type="button" disabled
+                                    class="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gray-400 cursor-not-allowed">
+                                Already Sent
+                            </button>
+                            {% else %}
+                            <button type="submit" id="start-campaign-btn"
+                                    class="inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                    {% if not resumes or resumes|length == 0 or not contacts or contacts|length == 0 %}disabled{% endif %}>
+                                Start Campaign
+                            </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div> <!-- Close max-w-7xl wrapper -->
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userName = "{{ user_name }}";
+            const campaignId = "{{ campaign._id }}";
+            const generateButton = document.getElementById('generate-ai-content-btn');
+            const form = document.getElementById('send-campaign-form');
+            const sendButton = document.getElementById('start-campaign-btn');
+            const currentEmailEditor = document.getElementById('current-email-editor');
+            const noContactSelected = document.getElementById('no-contact-selected');
+            const currentSubjectInput = document.getElementById('current_subject');
+            const currentBodyInput = document.getElementById('current_body');
+            const currentContactNameElement = document.getElementById('current-contact-name');
+            const contactButtons = document.querySelectorAll('.contact-select-btn');
+            const resumeForContact = document.getElementById('resume_for_contact');
+            const customPromptForContact = document.getElementById('custom_prompt_for_contact');
+            const generateForContactBtn = document.getElementById('generate_for_contact_btn');
+            
+            let currentContactId = null;
+            let currentContactName = null;
+            let draftUpdateTimeout = null;
+            
+            // Setup contact selection buttons
+            contactButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const contactId = this.getAttribute('data-contact-id');
+                    selectContact(contactId, this.textContent.trim());
+                    
+                    // Highlight the selected button and un-highlight others
+                    contactButtons.forEach(btn => {
+                        btn.classList.remove('bg-indigo-100', 'border-indigo-500');
+                    });
+                    this.classList.add('bg-indigo-100', 'border-indigo-500');
+                });
+            });
+            
+            // Function to select a contact and load their email content
+            function selectContact(contactId, contactName) {
+                currentContactId = contactId;
+                currentContactName = contactName;
+                currentContactNameElement.textContent = `Email for: ${contactName}`;
+                
+                // Hide the "no contact selected" message
+                noContactSelected.classList.add('hidden');
+                // Show the email editor
+                currentEmailEditor.classList.remove('hidden');
+                
+                // Get the email content from the hidden store
+                const subjectField = document.getElementById(`subject_${contactId}`);
+                const bodyField = document.getElementById(`body_${contactId}`);
+                const resumeField = document.getElementById(`resume_${contactId}`);
+                
+                if (subjectField && bodyField) {
+                    currentSubjectInput.value = subjectField.value;
+                    currentBodyInput.value = bodyField.value;
+                    
+                    // Set the resume dropdown to the stored value if it exists
+                    if (resumeField && resumeField.value) {
+                        resumeForContact.value = resumeField.value;
+                    } else {
+                        // Reset to default if no resume is selected for this contact
+                        resumeForContact.selectedIndex = 0;
+                    }
+                } else {
+                    currentSubjectInput.value = "";
+                    currentBodyInput.value = "";
+                    resumeForContact.selectedIndex = 0;
+                }
+            }
+            
+            // Function to update draft in the database
+            async function updateDraftInDatabase(contactId, subject, body, resumeId) {
+                try {
+                    const response = await fetch(`/campaign/${campaignId}/update-draft`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contact_id: contactId,
+                            subject: subject,
+                            body: body,
+                            resume_id: resumeId || ""
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        console.error('Failed to update draft in database');
+                    }
+                } catch (error) {
+                    console.error('Error updating draft:', error);
+                }
+            }
+            
+            // Update the hidden storage fields when the visible inputs change with debounce
+            function updateDraft() {
+                if (currentContactId) {
+                    // Update the hidden fields
+                    const hiddenSubjectField = document.getElementById(`subject_${currentContactId}`);
+                    const hiddenBodyField = document.getElementById(`body_${currentContactId}`);
+                    const hiddenResumeField = document.getElementById(`resume_${currentContactId}`);
+                    
+                    if (hiddenSubjectField && hiddenBodyField && hiddenResumeField) {
+                        hiddenSubjectField.value = currentSubjectInput.value;
+                        hiddenBodyField.value = currentBodyInput.value;
+                        hiddenResumeField.value = resumeForContact.value;
+                        
+                        // Debounced update to the database
+                        clearTimeout(draftUpdateTimeout);
+                        draftUpdateTimeout = setTimeout(() => {
+                            updateDraftInDatabase(
+                                currentContactId,
+                                currentSubjectInput.value,
+                                currentBodyInput.value,
+                                resumeForContact.value
+                            );
+                        }, 1000); // Wait 1 second after typing stops
+                    }
+                }
+            }
+            
+            // Add input/change event listeners to all editable fields
+            currentSubjectInput.addEventListener('input', updateDraft);
+            currentBodyInput.addEventListener('input', updateDraft);
+            resumeForContact.addEventListener('change', updateDraft);
+            
+            // Handle custom prompt generation for the current contact
+            generateForContactBtn.addEventListener('click', async function() {
+                if (!currentContactId) {
+                    alert('Please select a contact first.');
+                    return;
+                }
+                
+                const customPrompt = customPromptForContact.value.trim();
+                if (!customPrompt) {
+                    alert('Please enter custom instructions for generation.');
+                    return;
+                }
+                
+                generateForContactBtn.disabled = true;
+                generateForContactBtn.innerHTML = '<span class="animate-pulse">Generating...</span>';
+                
+                try {
+                    const response = await fetch(`/campaign/${campaignId}/generate-single-email`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contact_id: currentContactId,
+                            custom_prompt: customPrompt
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const generatedEmail = await response.json();
+                    
+                    // Update the current editor
+                    currentSubjectInput.value = generatedEmail.generated_subject;
+                    currentBodyInput.value = generatedEmail.generated_body;
+                    
+                    // Update the hidden fields
+                    const hiddenSubjectField = document.getElementById(`subject_${currentContactId}`);
+                    const hiddenBodyField = document.getElementById(`body_${currentContactId}`);
+                    
+                    if (hiddenSubjectField && hiddenBodyField) {
+                        hiddenSubjectField.value = generatedEmail.generated_subject;
+                        hiddenBodyField.value = generatedEmail.generated_body;
+                        
+                        // Update in database
+                        updateDraftInDatabase(
+                            currentContactId,
+                            generatedEmail.generated_subject,
+                            generatedEmail.generated_body,
+                            resumeForContact.value
+                        );
+                    }
+                    
+                    customPromptForContact.value = ''; // Clear the custom prompt
+                    
+                } catch (error) {
+                    console.error('Error generating content for contact:', error);
+                    alert(`Failed to generate content: ${error.message}`);
+                } finally {
+                    generateForContactBtn.disabled = false;
+                    generateForContactBtn.textContent = 'Regenerate';
+                }
+            });
+            
+            // Original bulk generation button (for all contacts)
+            generateButton.addEventListener('click', async function() {
+                generateButton.disabled = true;
+                generateButton.innerHTML = '<span class="animate-pulse">Generating...</span>';
+
+                try {
+                    const response = await fetch(`{{ url_for('generate_campaign_emails', campaign_id=campaign._id) }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            custom_prompt: ""
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const generatedEmails = await response.json();
+
+                    if (generatedEmails.length === 0) {
+                        alert('No email content could be generated. Please check campaign contacts.');
+                        return;
+                    }
+
+                    // Update the hidden data store with the newly generated content
+                    const dataStore = document.getElementById('email-data-store');
+                    dataStore.innerHTML = ''; // Clear existing data
+
+                    generatedEmails.forEach(emailData => {
+                        // Create hidden input for subject
+                        const subjectInput = document.createElement('input');
+                        subjectInput.type = 'hidden';
+                        subjectInput.id = `subject_${emailData.contact_id}`;
+                        subjectInput.name = `subjects[${emailData.contact_id}]`;
+                        subjectInput.value = emailData.generated_subject;
+                        dataStore.appendChild(subjectInput);
+                        
+                        // Create hidden textarea for body
+                        const bodyTextarea = document.createElement('textarea');
+                        bodyTextarea.className = 'hidden';
+                        bodyTextarea.id = `body_${emailData.contact_id}`;
+                        bodyTextarea.name = `bodies[${emailData.contact_id}]`;
+                        bodyTextarea.textContent = emailData.generated_body;
+                        dataStore.appendChild(bodyTextarea);
+                        
+                        // Create hidden input for resume
+                        const resumeInput = document.createElement('input');
+                        resumeInput.type = 'hidden';
+                        resumeInput.id = `resume_${emailData.contact_id}`;
+                        resumeInput.name = `resumes[${emailData.contact_id}]`;
+                        resumeInput.value = "";
+                        dataStore.appendChild(resumeInput);
+                    });
+                    
+                    // If a contact is currently selected, update the visible content
+                    if (currentContactId) {
+                        const newSubject = document.getElementById(`subject_${currentContactId}`);
+                        const newBody = document.getElementById(`body_${currentContactId}`);
+                        if (newSubject && newBody) {
+                            currentSubjectInput.value = newSubject.value;
+                            currentBodyInput.value = newBody.value;
+                        }
+                    }
+                    
+                    alert('Email content generation complete. Select contacts to view and edit.');
+
+                } catch (error) {
+                    console.error('Error generating AI content for campaign:', error);
+                    alert(`Failed to generate AI content: ${error.message}`);
+                } finally {
+                    generateButton.disabled = false;
+                    generateButton.innerHTML = '✨ Generate with AI';
+                }
+            });
+
+            form.addEventListener('submit', function() {
+                sendButton.disabled = true;
+                sendButton.textContent = 'Sending...';
+            });
+            
+            // If there's at least one contact, select the first one automatically
+            if (contactButtons.length > 0) {
+                contactButtons[0].click();
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', path='/script.js') }}"></script>
+</body>
+</html>

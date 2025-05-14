@@ -1,0 +1,71 @@
+Project Summary (as of 2025-05-11)
+
+This project is a FastAPI web application designed for finding and managing professional email contacts. It interacts with a MongoDB database and the Hunter.io API.
+
+Key Functionalities Implemented:
+
+1.  User Authentication:
+    *   Login: Users can log in with email and password. Credentials are verified against the `user` collection in MongoDB.
+    *   Server-Side Sessions: FastAPI's `SessionMiddleware` is used to manage user sessions. `SECRET_KEY` is loaded from `.env`.
+    *   Logout: A `/logout` endpoint clears the session.
+    *   Registration: Functionality was initially present but has since been removed (routes commented out in `main.py`, though `templates/register.html` still exists).
+
+2.  Email Searching (Main Page - `/`):
+    *   Authenticated users can search for emails by domain name. Optional filters include name, department, and seniority.
+    *   Uses the Hunter.io API (API key is hardcoded in `main.py`, ideally should be in `.env`).
+    *   Search results are displayed in a table.
+    *   Domain information (organization, email pattern, etc.) for the searched domain is displayed above the results, clearing previous domain info.
+    *   Users can select contacts from the search results.
+
+3.  Contact Management:
+    *   Saving Contacts: Selected contacts from search results can be saved. They are stored in the `contacts` collection in MongoDB and linked to the logged-in user via `user_id`.
+    *   Viewing Saved Contacts (`/my-contacts`):
+        *   Displays all contacts saved by the logged-in user in a table.
+        *   Includes fields: Name, Email, Company, Position, Department, Seniority, Ref Tag, Confidence.
+    *   Manually Adding Contacts:
+        *   A form on the "My Saved Contacts" page allows users to manually add new contacts with fields for Name, Email, Company, Position, Department, Seniority, and a custom "Reference Tag" (`ref_tag`).
+        *   Manually added contacts are also saved to the `contacts` collection, linked to the user, and marked with `source: "manual"`.
+    *   Editing Reference Tags:
+        *   On the "My Saved Contacts" page, the "Ref Tag" for each contact can be edited inline within the table.
+        *   Changes are saved to the database.
+    *   Deleting Contacts:
+        *   Each contact in the "My Saved Contacts" table has a "Delete" button.
+        *   Deletes the contact from the MongoDB `contacts` collection after user confirmation.
+
+4.  Campaigns Page (`/campaigns`):
+    *   A placeholder page for future campaign management functionality. Accessible via the sidebar.
+
+Technical Details:
+
+*   Backend: FastAPI
+*   Database: MongoDB (connection via `MONGO_URI` in `.env`). `database.py` handles DB interactions (user creation, verification, contact saving/retrieval/deletion/updates). `ObjectId`s are handled for JSON serialization.
+*   Frontend: Jinja2 templates, Tailwind CSS for styling, and client-side JavaScript for dynamic interactions (fetching data, form submissions, DOM manipulation).
+*   External APIs: Hunter.io for email searching.
+*   Dependencies (`requirements.txt`): fastapi, uvicorn, pymongo, python-dotenv, requests, bcrypt, python-multipart, jinja2, apify-client.
+
+File Structure:
+*   `main.py`: Main FastAPI application, defines routes and API endpoints.
+*   `database.py`: Handles all MongoDB interactions.
+*   `.env`: Stores `MONGO_URI` and `SECRET_KEY`. (User needs to ensure these are correctly set).
+*   `static/`: Contains `script.js` (main client-side logic for search page, saving contacts) and `styles.css`.
+*   `templates/`:
+    *   `index.html`: Main search page.
+    *   `login.html`: User login page.
+    *   `contacts.html`: Page to view, manually add, edit tags for, and delete saved contacts.
+    *   `campaigns.html`: Placeholder for campaigns.
+    *   `register.html`: (Exists but functionality is disabled).
+*   `mdb.py`: Appears to be a standalone script for direct DB testing/examples, not used by the live application.
+
+Layout:
+*   A consistent left sidebar is implemented on `/`, `/my-contacts`, and `/campaigns` pages, providing navigation for "Search", "View Contacts", "Campaigns", and "Logout".
+*   The header on content pages displays the page title and a welcome message for the logged-in user.
+
+Recent Changes/Fixes:
+*   Corrected Hunter.io API limit from 100 to 10 due to plan limitations.
+*   Implemented server-side sessions, removing reliance on `localStorage` for authentication.
+*   Ensured only current domain information is displayed on the search page.
+*   Added "View Contacts" page with table display, manual add form, inline ref_tag editing, and delete functionality.
+*   Fixed JSON serialization issues for MongoDB `ObjectId`s.
+*   Fixed contact deletion by correctly converting string ID to `ObjectId`.
+*   Improved table layout on `contacts.html` to handle potential overflow.
+*   Added placeholder "Campaigns" page and sidebar link.

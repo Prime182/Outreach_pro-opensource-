@@ -1,0 +1,39 @@
+<!-- Fixed Position Sidebar -->
+<div class="fixed top-0 left-0 w-60 flex-shrink-0 bg-gray-800 text-gray-100 p-4 flex flex-col h-screen z-20">
+    <h2 class="text-2xl font-semibold mb-6 text-white text-center">OutreachPro</h2>
+    <nav class="flex-grow space-y-1">
+        {% if user_name %}
+        <a href="/" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/' %}bg-gray-700{% endif %}">
+            Search
+        </a>
+        <a href="/my-contacts" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/my-contacts' %}bg-gray-700{% endif %}">
+            View Contacts
+        </a>
+        <a href="/campaigns" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/campaigns' %}bg-gray-700{% endif %}">
+            Campaigns
+        </a>
+        <a href="/resumes" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/resumes' %}bg-gray-700{% endif %}">
+            Resumes
+        </a>
+        <a href="{{ url_for('smtp_settings_page') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == url_for('smtp_settings_page') %}bg-gray-700{% endif %}">
+            SMTP Settings
+        </a>
+        <a href="{{ url_for('email_tracking_dashboard') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == url_for('email_tracking_dashboard') %}bg-gray-700{% endif %}">
+            Email Tracking
+        </a>
+        {% endif %}
+    </nav>
+    {% if user_name %}
+    <div class="mt-auto pb-4">
+         <a href="/logout" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-red-500 hover:text-white text-center bg-gray-700">
+            Logout
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- This spacer should be included after the sidebar to offset the fixed position -->
+<div class="w-60 flex-shrink-0"></div>
+<style>
+/* This style is no longer needed as we're using Tailwind classes directly */
+</style>

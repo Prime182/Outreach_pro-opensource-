@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>Campaign Tracking Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+</head>
+<body class="bg-gray-100">
+    <div class="flex min-h-screen"> <!-- Flex container for sidebar and main content -->
+        <!-- Sidebar -->
+        <aside class="w-60 bg-gray-800 text-gray-100 p-4 flex flex-col h-screen">
+            <h2 class="text-2xl font-semibold mb-6 text-white text-center">Menu</h2>
+            <nav class="flex-grow space-y-1">
+                {% if user_name %}
+                <a href="/" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/' %}bg-gray-700{% endif %}">
+                    Search
+                </a>
+                <a href="/my-contacts" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/my-contacts' %}bg-gray-700{% endif %}">
+                    View Contacts
+                </a>
+                <a href="/campaigns" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/campaigns' %}bg-gray-700{% endif %}">
+                    Campaigns
+                </a>
+                <a href="/resumes" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/resumes' %}bg-gray-700{% endif %}">
+                    Resumes
+                </a>
+                <a href="{{ url_for('smtp_settings_page') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == url_for('smtp_settings_page') %}bg-gray-700{% endif %}">
+                    SMTP Settings
+                </a>
+                <a href="{{ url_for('email_tracking_dashboard') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == url_for('email_tracking_dashboard') %}bg-gray-700{% endif %}">
+                    Email Tracking
+                </a>
+                {% endif %}
+            </nav>
+            {% if user_name %}
+            <div class="mt-auto"> <!-- Pushes logout to the bottom -->
+                 <a href="/logout" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-red-500 hover:text-white text-center bg-gray-700">
+                    Logout
+                </a>
+            </div>
+            {% endif %}
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-grow flex flex-col">
+            <!-- Header -->
+            <header class="bg-white shadow-md sticky top-0 z-10">
+                <div class="max-w-full mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+                    <div>
+                        <a href="{{ url_for('email_tracking_dashboard') }}" class="text-blue-600 hover:text-blue-800 inline-flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                            Back to Dashboard
+                        </a>
+                        <h1 class="text-2xl font-bold text-gray-900 mt-1">Campaign: {{ campaign.campaign_name }}</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center">
+                            <span class="mr-2 text-sm text-gray-600">🌞</span>
+                            <label for="theme-toggle" class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="theme-toggle" class="sr-only">
+                                <div class="w-11 h-6 bg-gray-300 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                            </label>
+                            <span class="ml-2 text-sm text-gray-600">🌙</span>
+                        </div>
+                        {% if user_name %}
+                            <span class="text-sm text-gray-700">Welcome, {{ user_name }}!</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </header>
+
+            <!-- Actual Page Content -->
+            <main class="flex-grow p-6 overflow-y-auto">
+                {% if flash_message %}
+                <div class="p-4 mb-4 text-sm rounded-lg {% if flash_category == 'success' %}bg-green-100 text-green-700{% elif flash_category == 'error' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}" role="alert">
+                    {{ flash_message }}
+                </div>
+                {% endif %}
+
+                <!-- Campaign Stats Card -->
+                <div class="bg-white shadow rounded-lg p-6 mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Campaign Statistics</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-blue-50 rounded-lg p-4 text-center">
+                            <div class="text-xl font-semibold text-blue-600">{{ tracking_stats.total_sent }}</div>
+                            <div class="text-sm text-gray-600">Emails Sent</div>
+                        </div>
+                        
+                        <div class="bg-green-50 rounded-lg p-4 text-center">
+                            <div class="text-xl font-semibold text-green-600">{{ tracking_stats.total_opened }}</div>
+                            <div class="text-sm text-gray-600">Emails Opened</div>
+                        </div>
+                        
+                        <div class="bg-indigo-50 rounded-lg p-4 text-center">
+                            <div class="text-xl font-semibold text-indigo-600">{{ tracking_stats.open_rate }}%</div>
+                            <div class="text-sm text-gray-600">Open Rate</div>
+                        </div>
+                        
+                        <div class="bg-purple-50 rounded-lg p-4 text-center">
+                            <div class="text-xl font-semibold text-purple-600">{{ tracking_stats.avg_opens_per_email }}</div>
+                            <div class="text-sm text-gray-600">Avg Opens Per Email</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email Tracking Details Table -->
+                <div class="bg-white shadow rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Email Tracking Details</h2>
+                    
+                    {% if tracking_stats.tracking_records and tracking_stats.tracking_records|length > 0 %}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sent At</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Opened</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Opened</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Open Count</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for record in tracking_stats.tracking_records %}
+                                <tr class="{% if record.opened_at %}bg-green-50{% endif %}">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ record.contact_name }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ record.contact_email }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ record.sent_at.strftime('%Y-%m-%d %H:%M:%S') if record.sent_at else 'N/A' }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm {% if record.opened_at %}text-green-600 font-medium{% else %}text-gray-500{% endif %}">
+                                        {{ record.opened_at.strftime('%Y-%m-%d %H:%M:%S') if record.opened_at else 'Not opened' }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm {% if record.last_opened_at %}text-green-600 font-medium{% else %}text-gray-500{% endif %}">
+                                        {{ record.last_opened_at.strftime('%Y-%m-%d %H:%M:%S') if record.last_opened_at else 'N/A' }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium {% if record.open_count > 0 %}text-green-600{% else %}text-gray-500{% endif %}">
+                                        {{ record.open_count }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                            {% if record.status == 'opened' %}
+                                                bg-green-100 text-green-800
+                                            {% elif record.status == 'sent' %}
+                                                bg-blue-100 text-blue-800
+                                            {% elif record.status == 'bounced' %}
+                                                bg-red-100 text-red-800
+                                            {% else %}
+                                                bg-gray-100 text-gray-800
+                                            {% endif %}">
+                                            {{ record.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500">No tracking data available for this campaign.</p>
+                    {% endif %}
+                </div>
+            </main>
+        </div>
+    </div>
+    <script src="{{ url_for('static', path='/script.js') }}"></script>
+</body>
+</html> 

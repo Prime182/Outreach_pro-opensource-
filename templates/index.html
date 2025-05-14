@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>OutreachPro – Automated Job Referral Engine</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+    <!-- localStorage check removed, server handles auth redirect -->
+</head>
+<body class="bg-gray-100">
+    <div class="flex min-h-screen"> <!-- Flex container for sidebar and main content -->
+        <!-- Sidebar - Fixed Position -->
+        <aside class="fixed top-0 left-0 w-60 bg-gray-800 text-gray-100 p-4 flex flex-col h-screen z-20">
+            <h2 class="text-2xl font-semibold mb-6 text-white text-center">Menu</h2>
+            <nav class="flex-grow space-y-1">
+                {% if user_name %}
+                <a href="/" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/' %}bg-gray-700{% endif %}">
+                    Search
+                </a>
+                <a href="/my-contacts" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/my-contacts' %}bg-gray-700{% endif %}">
+                    View Contacts
+                </a>
+                <a href="/campaigns" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/campaigns' %}bg-gray-700{% endif %}">
+                    Campaigns
+                </a>
+                <a href="/resumes" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == '/resumes' %}bg-gray-700{% endif %}">
+                    Resumes
+                </a>
+                <a href="{{ url_for('smtp_settings_page') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == url_for('smtp_settings_page') %}bg-gray-700{% endif %}">
+                    SMTP Settings
+                </a>
+                <a href="{{ url_for('email_tracking_dashboard') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-white {% if request.url.path == url_for('email_tracking_dashboard') %}bg-gray-700{% endif %}">
+                    Email Tracking
+                </a>
+                {% endif %}
+            </nav>
+            {% if user_name %}
+            <div class="mt-auto pb-4">
+                 <a href="/logout" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-red-500 hover:text-white text-center bg-gray-700">
+                    Logout
+                </a>
+            </div>
+            {% endif %}
+        </aside>
+
+        <!-- Spacer to offset the fixed sidebar -->
+        <div class="w-60 flex-shrink-0"></div>
+
+        <!-- Main Content Area -->
+        <div class="flex-grow flex flex-col">
+            <!-- Header -->
+            <header class="bg-white shadow-md sticky top-0 z-10">
+                <div class="max-w-full mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">OutreachPro</h1>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center">
+                            <span class="mr-2 text-sm text-gray-600">🌞</span>
+                            <label for="theme-toggle" class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="theme-toggle" class="sr-only">
+                                <div class="w-11 h-6 bg-gray-300 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                            </label>
+                            <span class="ml-2 text-sm text-gray-600">🌙</span>
+                        </div>
+                        {% if user_name %}
+                            <span class="text-sm text-gray-700">Welcome, {{ user_name }}!</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </header>
+
+            <!-- Actual Page Content -->
+            <main class="flex-grow py-6 overflow-y-auto">
+                <div class="max-w-7xl mx-auto px-6 lg:px-8">
+                    <!-- Search Section -->
+                    <div class="bg-white shadow rounded-lg p-6 mb-6">
+                <form id="searchForm" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label for="domain" class="block text-sm font-medium text-gray-700">Domain Name</label>
+                            <div class="mt-1">
+                                <input type="text" name="domain" id="domain" 
+                                       class="focus:ring-indigo-500 focus:border-indigo-500 block w-full rounded-md sm:text-sm border-gray-300"
+                                       placeholder="e.g., company.com">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700">Name (Optional)</label>
+                            <div class="mt-1">
+                                <input type="text" name="name" id="name" 
+                                       class="focus:ring-indigo-500 focus:border-indigo-500 block w-full rounded-md sm:text-sm border-gray-300"
+                                       placeholder="e.g., John Doe">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="department" class="block text-sm font-medium text-gray-700">Department (Optional)</label>
+                            <div class="mt-1">
+                                <select name="department" id="department" 
+                                        class="focus:ring-indigo-500 focus:border-indigo-500 block w-full rounded-md sm:text-sm border-gray-300">
+                                    <option value="">All Departments</option>
+                                    <option value="executive">Executive</option>
+                                    <option value="it">IT</option>
+                                    <option value="sales">Sales</option>
+                                    <option value="marketing">Marketing</option>
+                                    <option value="hr">HR</option>
+                                    <option value="finance">Finance</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="seniority" class="block text-sm font-medium text-gray-700">Seniority (Optional)</label>
+                            <div class="mt-1">
+                                <select name="seniority" id="seniority" 
+                                        class="focus:ring-indigo-500 focus:border-indigo-500 block w-full rounded-md sm:text-sm border-gray-300">
+                                    <option value="">All Levels</option>
+                                    <option value="executive">Executive</option>
+                                    <option value="senior">Senior</option>
+                                    <option value="mid">Mid-Level</option>
+                                    <option value="junior">Junior</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <button type="submit" 
+                                class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Domain Info Container -->
+            <div id="domainInfoContainer" class="mb-6">
+                <!-- Domain info will be injected here by script.js -->
+            </div>
+
+            <!-- Results Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Results Table -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white shadow rounded-lg">
+                        <div class="px-4 py-5 sm:p-6">
+                            <h2 class="text-lg font-medium text-gray-900 mb-4">Search Results</h2>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <input type="checkbox" id="selectAll" class="rounded">
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="resultsTable" class="bg-white divide-y divide-gray-200">
+                                        <!-- Results will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selected Contacts Sidebar -->
+                <div class="lg:col-span-1">
+                    <div class="bg-white shadow rounded-lg">
+                        <div class="px-4 py-5 sm:p-6">
+                            <h2 class="text-lg font-medium text-gray-900 mb-4">Selected Contacts</h2>
+                            <div id="selectedContacts" class="space-y-4">
+                                <!-- Selected contacts will be populated here -->
+                            </div>
+                            <div class="mt-6">
+                                <button id="saveButton" 
+                                        class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    Save Selected Contacts
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- Close max-w-7xl wrapper -->
+            </main>
+    </div>
+
+    <script src="{{ url_for('static', path='/script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Register</h1>
+        <form action="/register" method="post">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required>
+
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+            
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            
+            <button type="submit">Register</button>
+        </form>
+        <p id="message" style="color: green;"></p>
+        <p id="error-message" style="color: red;"></p>
+        <p>Already have an account? <a href="/login">Login here</a></p>
+    </div>
+    <script>
+        const form = document.querySelector('form');
+        const message = document.getElementById('message');
+        const errorMessage = document.getElementById('error-message');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            message.textContent = '';
+            errorMessage.textContent = '';
+
+            const formData = new FormData(form);
+            const response = await fetch('/register', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                message.textContent = result.message + " You can now login.";
+                form.reset(); // Clear the form
+            } else {
+                errorMessage.textContent = result.detail || 'Registration failed. Please try again.';
+            }
+        });
+    </script>
+</body>
+</html>
