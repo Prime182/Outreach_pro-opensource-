@@ -664,10 +664,9 @@ async def send_campaign_route(
     request: Request, 
     campaign_id: str, 
     background_tasks: BackgroundTasks,
-    # No longer require a single resume_id as Form parameter
 ):
     user_id = request.session.get("user_id")
-    user_display_name = request.session.get("name") # Get display name from session
+    user_display_name = request.session.get("name")
 
     if not user_id or not user_display_name:
         raise HTTPException(status_code=401, detail="Not authenticated or user name not found in session.")
@@ -678,13 +677,10 @@ async def send_campaign_route(
         logger.error(f"Could not fetch email for user_id: {user_id}")
         request.session["flash_message"] = "Could not retrieve your email details to send the campaign."
         request.session["flash_category"] = "error"
-        # Redirect back to start page if possible, or campaigns page
         redirect_url = request.url_for("start_campaign_page", campaign_id=campaign_id) if campaign_id else request.url_for("campaigns_page")
         return RedirectResponse(url=redirect_url, status_code=303)
         
     user_actual_email = user_details["email"]
-
-    form_data = await request.form()
 
     # Check if user has SMTP settings configured
     smtp_settings = db.get_smtp_settings(user_id)
@@ -692,7 +688,6 @@ async def send_campaign_route(
         logger.warning(f"User {user_id} attempted to send campaign {campaign_id} but has no SMTP settings configured.")
         request.session["flash_message"] = "SMTP settings not configured. Please configure your SMTP details first."
         request.session["flash_category"] = "error"
-        # Redirect to SMTP settings page or campaign start page
         return RedirectResponse(url=request.url_for("smtp_settings_page"), status_code=303)
 
     # These values won't be used since we fetch them again inside send_single_email, but we need to provide them
@@ -732,6 +727,16 @@ async def send_campaign_route(
              request.session["flash_category"] = "error"
              return RedirectResponse(url=request.url_for("start_campaign_page", campaign_id=campaign_id), status_code=303)
 
+        # Instead of relying on form data, get drafts directly from DB
+        stored_drafts = db.get_draft_emails(campaign_id, user_id)
+        if not stored_drafts:
+            request.session["flash_message"] = "No draft emails found. Please generate emails first."
+            request.session["flash_category"] = "error"
+            return RedirectResponse(url=request.url_for("start_campaign_page", campaign_id=campaign_id), status_code=303)
+        
+        # Create a map of contact_id to draft
+        email_drafts_map = {draft["contact_id"]: draft for draft in stored_drafts}
+
         # 4. Add email sending tasks to background
         emails_queued_count = 0
         for contact in contacts_in_campaign:
@@ -739,38 +744,34 @@ async def send_campaign_route(
             contact_id = contact["_id"]
             recipient_email = contact["email"]
             recipient_name = contact.get("name", "there") # Default name
-            # Fetch email subject and body from form (or get from DB if in later version)
-            draft_key = f"draft_{contact_id}" # Key format should match what's used in the form
-            if draft_key in form_data:
-                email_draft_json = form_data[draft_key]
-                try:
-                    email_draft = json.loads(email_draft_json)
-                    # Create a task to send this email in the background
-                    background_tasks.add_task(
-                        send_single_email,
-                        smtp_server=smtp_host,
-                        smtp_port=smtp_port,
-                        smtp_username=smtp_username,
-                        smtp_password=smtp_password,
-                        from_display_name=user_display_name,
-                        recipient_email=recipient_email,
-                        recipient_name=recipient_name,
-                        subject=email_draft.get("subject", ""),
-                        body_template=email_draft.get("body", ""),
-                        resume_data=None, # This is handled separately now
-                        resume_filename=None,
-                        tracking_id=tracking_id,
-                        base_url=PUBLIC_BASE_URL,  # Use the PUBLIC_BASE_URL from environment
-                        user_id=user_id,
-                        campaign_id=campaign_id,
-                        contact_id=contact_id,
-                        job_role=contact.get("position", "") # If available, pass along the contact's job role
-                    )
-                    emails_queued_count += 1
-                except json.JSONDecodeError:
-                    logger.error(f"Failed to parse draft JSON for contact {contact_id}: {email_draft_json}")
+            
+            # Get the draft from our map instead of form data
+            email_draft = email_drafts_map.get(contact_id)
+            if email_draft:
+                # Create a task to send this email in the background
+                background_tasks.add_task(
+                    send_single_email,
+                    smtp_server=smtp_host,
+                    smtp_port=smtp_port,
+                    smtp_username=smtp_username,
+                    smtp_password=smtp_password,
+                    from_display_name=user_display_name,
+                    recipient_email=recipient_email,
+                    recipient_name=recipient_name,
+                    subject=email_draft.get("generated_subject", ""),
+                    body_template=email_draft.get("generated_body", ""),
+                    resume_data=None, # This is handled separately now
+                    resume_filename=None,
+                    tracking_id=tracking_id,
+                    base_url=PUBLIC_BASE_URL,  # Use the PUBLIC_BASE_URL from environment
+                    user_id=user_id,
+                    campaign_id=campaign_id,
+                    contact_id=contact_id,
+                    job_role=contact.get("ref_tag", "") # Pass along the contact's job role
+                )
+                emails_queued_count += 1
             else:
-                logger.warning(f"No draft found for contact {contact_id} in form data")
+                logger.warning(f"No draft found for contact {contact_id} in database")
 
         logger.info(f"Campaign {campaign_id} sending initiated for {emails_queued_count} contacts by user {user_id} using their SMTP settings.")
         
