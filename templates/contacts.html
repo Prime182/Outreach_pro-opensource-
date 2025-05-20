@@ -192,8 +192,14 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${contact.department || 'N/A'}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${contact.seniority || 'N/A'}</td>
                             <td class="px-6 py-4 text-sm text-gray-900">
-                                <input type="text" value="${contact.ref_tag || ''}" class="ref-tag-input p-1 border rounded w-full text-sm" data-contact-id="${contact._id}" placeholder="Add tag...">
-                                <button class="save-ref-tag-btn text-xs text-indigo-600 hover:text-indigo-900 ml-1 hidden" data-contact-id="${contact._id}">Save</button>
+                                <div class="overflow-visible">
+                                    <textarea class="ref-tag-input p-1 border rounded w-full text-sm min-h-[60px]" 
+                                      data-contact-id="${contact._id}" 
+                                      placeholder="Add tag..."
+                                      style="min-width: 200px; resize: both;">${contact.ref_tag || ''}</textarea>
+                                    <button class="save-ref-tag-btn text-xs text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded mt-1 hidden" 
+                                      data-contact-id="${contact._id}">Save</button>
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${contact.confidence ? contact.confidence + '%' : 'N/A'}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -225,8 +231,13 @@
                 const newRefTagInput = input.cloneNode(true);
                 input.parentNode.replaceChild(newRefTagInput, input);
                 newRefTagInput.addEventListener('input', handleRefTagInputChange);
+                // Allow textarea to adjust height automatically
+                newRefTagInput.addEventListener('keyup', function() {
+                    this.style.height = 'auto';
+                    this.style.height = (this.scrollHeight) + 'px';
+                });
                 newRefTagInput.addEventListener('keypress', function(event) {
-                    if (event.key === 'Enter') {
+                    if (event.key === 'Enter' && event.ctrlKey) {
                         event.preventDefault(); // Prevent form submission if inside one
                         const saveBtn = this.parentNode.querySelector('.save-ref-tag-btn');
                         if (saveBtn) saveBtn.click();

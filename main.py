@@ -109,6 +109,10 @@ async def home(request: Request):
         return RedirectResponse(url="/login", status_code=302)
     return templates.TemplateResponse("index.html", {"request": request, "user_name": request.session.get("name")})
 
+@app.head("/")
+async def head_root():
+    return Response(status_code=200)
+
 @app.get("/my-contacts", response_class=HTMLResponse)
 async def my_contacts_page(request: Request):
     user_id = request.session.get("user_id")
@@ -615,6 +619,11 @@ async def send_single_email(
         
         logger.info(f"Sending email From: '{from_display_name} <{from_email_address_to_use}>' To: '{recipient_email}'")
 
+        # Create tracking record BEFORE sending email
+        # This ensures the record exists when the tracking pixel is fetched
+        db.create_tracking_record(tracking_id, user_id, campaign_id, contact_id)
+        logger.info(f"Created tracking record with ID: {tracking_id}")
+
         # Attach HTML body
         message.attach(MIMEText(html_body, "html"))
 
@@ -637,10 +646,6 @@ async def send_single_email(
             logger.info(f"Login successful, sending email to {recipient_email}...")
             server.sendmail(smtp_username_to_use, recipient_email, message.as_string()) # Use smtp_username_to_use as from_addr
             logger.info(f"Email sent successfully to {recipient_email} for campaign {campaign_id} using user {user_id}'s SMTP.")
-
-            # Create tracking record AFTER successful send
-            db.create_tracking_record(tracking_id, user_id, campaign_id, contact_id)
-            logger.info(f"Created tracking record with ID: {tracking_id}")
 
     except smtplib.SMTPAuthenticationError as auth_error:
         logger.error(f"SMTP Authentication failed for user {user_id} (SMTP user: {smtp_username_to_use}). Error: {str(auth_error)}")
@@ -727,6 +732,26 @@ async def send_campaign_route(
              request.session["flash_category"] = "error"
              return RedirectResponse(url=request.url_for("start_campaign_page", campaign_id=campaign_id), status_code=303)
 
+        # 3. Get resume data - fetch the first available resume
+        user_resumes = db.get_resumes_for_user(user_id)
+        if not user_resumes:
+            request.session["flash_message"] = "No resume found. Please upload a resume first."
+            request.session["flash_category"] = "error"
+            return RedirectResponse(url=request.url_for("resumes_page"), status_code=303)
+        
+        # Get the resume data
+        resume_id = user_resumes[0]["_id"]  # Use the first available resume
+        resume_file_data = db.get_resume_file_data(str(resume_id), user_id)
+        if not resume_file_data:
+            logger.error(f"Failed to retrieve resume data for resume ID {resume_id}")
+            request.session["flash_message"] = "Could not retrieve resume data. Please try again or upload a different resume."
+            request.session["flash_category"] = "error"
+            return RedirectResponse(url=request.url_for("start_campaign_page", campaign_id=campaign_id), status_code=303)
+        
+        resume_bytes = resume_file_data["data_stream"]
+        resume_filename = resume_file_data["filename"]
+        logger.info(f"Successfully loaded resume {resume_filename} for campaign {campaign_id}")
+
         # Instead of relying on form data, get drafts directly from DB
         stored_drafts = db.get_draft_emails(campaign_id, user_id)
         if not stored_drafts:
@@ -760,8 +785,8 @@ async def send_campaign_route(
                     recipient_name=recipient_name,
                     subject=email_draft.get("generated_subject", ""),
                     body_template=email_draft.get("generated_body", ""),
-                    resume_data=None, # This is handled separately now
-                    resume_filename=None,
+                    resume_data=resume_bytes,
+                    resume_filename=resume_filename,
                     tracking_id=tracking_id,
                     base_url=PUBLIC_BASE_URL,  # Use the PUBLIC_BASE_URL from environment
                     user_id=user_id,
@@ -1388,16 +1413,35 @@ async def send_campaign_now_route(
 
 # Tracking Pixel Endpoint
 @app.get("/track/{tracking_id}.png", name="track_email_open")
-async def track_email_open_route(tracking_id: str, background_tasks: BackgroundTasks):
+async def track_email_open_route(tracking_id: str, request: Request, background_tasks: BackgroundTasks):
     """
     Endpoint that serves a 1x1 transparent PNG image and records email opens.
     The tracking_id in the URL uniquely identifies the email send.
     This is called automatically when an email with a tracking pixel is opened.
     """
     try:
-        # Log the open event in the background
-        logger.info(f"Tracking pixel accessed for tracking_id: {tracking_id}")
-        background_tasks.add_task(db.mark_email_as_opened, tracking_id)
+        # Get and log user agent to help with debugging
+        user_agent = request.headers.get("User-Agent", "")
+        logger.info(f"Tracking pixel accessed for tracking_id: {tracking_id}, UA: {user_agent}")
+        
+        # List of known bot crawlers to ignore
+        known_bots = [
+            "Googlebot",
+            "Bingbot",
+            "Baiduspider",
+            "facebookexternalhit",
+            "Slackbot",
+            "WhatsApp",
+            "Edge/12"
+        ]
+        
+        # Only count as an open if not from a known proxy agent
+        is_bot = any(bot.lower() in user_agent.lower() for bot in known_bots)
+        if not is_bot:
+            logger.info(f"Counting open for {tracking_id} (real user agent)")
+            background_tasks.add_task(db.mark_email_as_opened, tracking_id)
+        else:
+            logger.info(f"Skipping counting open for {tracking_id} (detected bot: {user_agent})")
         
         # Return a 1x1 transparent PNG image
         # Pixel data (base64 encoded 1x1 transparent PNG)
